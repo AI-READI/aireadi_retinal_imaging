@@ -1,0 +1,2 @@
+# Spectralis unprocessed file
+retinal_oct/structural_oct/heidelberg_spectralis/1310/1310_spectralis_ppol_mac_hr_oct_oct_l_1.3.6.1.4.1.33437.11.4.9341142.12984163237260.29264.4.1.dcm
