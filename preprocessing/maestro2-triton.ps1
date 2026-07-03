@@ -1,7 +1,7 @@
 # $DICOM_OCT_EXPORT_EXE = "G:\OCT_v2\FdaFileParser\exe\DicomOctExport.exe"
 $DICOM_OCT_EXPORT_EXE = "C:\Users\sanjay\Downloads\OCT_v2\FdaFileParser\exe\DicomOctExport.exe"
-$BaseRoot = "D:\year3+raw\maestro2"
-$GlobalOutputRoot = "D:\year3+pre\maestro2"
+$BaseRoot = "D:\year4-raw\maestro2"
+$GlobalOutputRoot = "D:\year4-pre\maestro2"
 
 # Ensure global output root exists
 if (-not (Test-Path $GlobalOutputRoot)) {
