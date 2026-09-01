@@ -1521,6 +1521,13 @@ def get_protocol_updated(i):
 
     make_unknown = False
 
+    # whether if  the file stored with a lossless transfer syntax
+    try:
+        _ts_name = ds.file_meta.TransferSyntaxUID.name
+        is_lossless = "lossless" in _ts_name.lower()
+    except Exception:
+        is_lossless = False
+
     # --- Check 1
     if (
         "maestro2_3d_wide_oct" in protocol
@@ -1543,24 +1550,23 @@ def get_protocol_updated(i):
         make_unknown = True
 
     # --- Check 4
-    if (
-        "triton_3d_radial_oct" in protocol
+    if ("triton_3d_radial_oct" in protocol
         and ds.get("LossyImageCompressionRatio") is None
-    ):
+        and not is_lossless):
         make_unknown = True
 
     # --- Check 5
     if (
         "triton_macula_12x12_octa" in protocol
         and ds.get("LossyImageCompressionRatio") is None
-    ):
+        and not is_lossless):
         make_unknown = True
 
     # --- Check 6
     if (
         "triton_macula_6x6_octa" in protocol
         and ds.get("LossyImageCompressionRatio") is None
-    ):
+        and not is_lossless):
         make_unknown = True
 
     # --- Check 7 (segmentation file 7.3.dcm)
