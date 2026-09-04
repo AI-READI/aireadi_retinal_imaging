@@ -547,10 +547,10 @@ def topcon_check_files_expected(folder_path):
         for file in files:
             if file.endswith(
                 (
-                    "1.1.dcm",
-                    "2.1.dcm",
-                    "3.1.dcm",
-                    "7.3.dcm",
+                    ".1.1.dcm",
+                    ".2.1.dcm",
+                    ".3.1.dcm",
+                    ".7.3.dcm",
                     "6.3.dcm",
                     "6.4.dcm",
                     "6.5.dcm",
@@ -608,7 +608,7 @@ def topcon_process_folder(folder_path, outputpath, rule):
     """
     for root, dirs, files in os.walk(folder_path):
         for file in files:
-            if file.endswith("1.1.dcm") and file.startswith("2"):
+            if file.endswith(".1.1.dcm") and file.startswith("2"):
                 file_path = os.path.join(root, file)
                 original_folder_basename = os.path.basename(os.path.dirname(file_path))
                 info = imaging_classifying_rules.extract_dicom_entry(file_path)
@@ -637,33 +637,9 @@ def topcon_process_folder(folder_path, outputpath, rule):
                     f for f in all_items if os.path.isfile(os.path.join(folder, f))
                 ]
 
-                if len(all_files) == 3:
-                    for item in all_items:
-                        source_path = os.path.join(folder, item)
-                        if os.path.isdir(source_path):
-                            dest_path = os.path.join(output, item)
-                            if os.path.exists(dest_path):
-                                shutil.rmtree(dest_path)
-                            shutil.copytree(source_path, dest_path)
-                        elif item.endswith(("1.1.dcm", "2.1.dcm")):
-                            new_filename = f"{original_folder_basename}_{item}"
-                            dest_path = os.path.join(output, new_filename)
-                            shutil.copy2(source_path, dest_path)
-                else:
-                    for item in all_items:
-                        source_path = os.path.join(folder, item)
-                        if os.path.isdir(source_path):
-                            dest_path = os.path.join(output, item)
-                            if os.path.exists(dest_path):
-                                shutil.rmtree(dest_path)
-                            shutil.copytree(source_path, dest_path)
-                        else:
-                            new_filename = f"{original_folder_basename}_{item}"
-                            dest_path = os.path.join(output, new_filename)
-                            shutil.copy2(source_path, dest_path)
+                has_flow = any(f.endswith(".3.1.dcm") for f in all_files)
 
-                # for item in os.listdir(os.path.dirname(file_path)):
-                #     source_path = os.path.join(os.path.dirname(file_path), item)
+                if not has_flow:        source_path = os.path.join(os.path.dirname(file_path), item)
                 #     dest_path = os.path.join(output, item)
 
                 #     if os.path.isdir(source_path):
@@ -870,7 +846,7 @@ def topcon_submodality(file):
     #     submodality = "flow_cube"
 
     elif a.SOPClassUID == "1.2.840.10008.5.1.4.1.1.77.1.5.8" and file.endswith(
-        "3.1.dcm"
+        ".3.1.dcm"
     ):
         submodality = "flow_cube"
 
