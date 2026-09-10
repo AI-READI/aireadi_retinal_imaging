@@ -608,7 +608,7 @@ def topcon_process_folder(folder_path, outputpath, rule):
     """
     for root, dirs, files in os.walk(folder_path):
         for file in files:
-            if file.endswith(".1.1.dcm") and file.startswith("2"):
+            if file.endswith("1.1.dcm") and file.startswith("2"):
                 file_path = os.path.join(root, file)
                 original_folder_basename = os.path.basename(os.path.dirname(file_path))
                 info = imaging_classifying_rules.extract_dicom_entry(file_path)
@@ -655,7 +655,15 @@ def topcon_process_folder(folder_path, outputpath, rule):
                         elif item.endswith(("1.1.dcm", "2.1.dcm")):
                             item_ds = pydicom.dcmread(source_path)
                             item_protocol = str(item_ds.get("ProtocolName", "")).strip().lower()
-                            if item_protocol == this_protocol:
+
+                            if rule.startswith("triton_3d_radial"):
+                                keep = item_protocol.startswith("radial")
+                            elif rule.startswith("triton_3d_wide"):
+                                keep = item_protocol.startswith("3d")
+                            else:
+                                keep = item_protocol == this_protocol
+
+                            if keep:
                                 new_filename = f"{original_folder_basename}_{item}"
                                 dest_path = os.path.join(output, new_filename)
                                 shutil.copy2(source_path, dest_path)
