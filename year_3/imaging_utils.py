@@ -637,9 +637,42 @@ def topcon_process_folder(folder_path, outputpath, rule):
                     f for f in all_items if os.path.isfile(os.path.join(folder, f))
                 ]
 
-                has_flow = any(f.endswith(".3.1.dcm") for f in all_files)
+                has_flow = any(
+                    f.endswith((".3.1.dcm", "6.3.dcm", "6.4.dcm", "6.5.dcm", "6.80.dcm"))
+                    for f in all_files
+                )
 
-                if not has_flow:        source_path = os.path.join(os.path.dirname(file_path), item)
+                if not has_flow:
+                    this_protocol = str(info.protocolname).strip().lower()
+
+                    for item in all_items:
+                        source_path = os.path.join(folder, item)
+                        if os.path.isdir(source_path):
+                            dest_path = os.path.join(output, item)
+                            if os.path.exists(dest_path):
+                                shutil.rmtree(dest_path)
+                            shutil.copytree(source_path, dest_path)
+                        elif item.endswith(("1.1.dcm", "2.1.dcm")):
+                            item_ds = pydicom.dcmread(source_path)
+                            item_protocol = str(item_ds.get("ProtocolName", "")).strip().lower()
+                            if item_protocol == this_protocol:
+                                new_filename = f"{original_folder_basename}_{item}"
+                                dest_path = os.path.join(output, new_filename)
+                                shutil.copy2(source_path, dest_path)
+                else:
+                    for item in all_items:
+                        source_path = os.path.join(folder, item)
+                        if os.path.isdir(source_path):
+                            dest_path = os.path.join(output, item)
+                            if os.path.exists(dest_path):
+                                shutil.rmtree(dest_path)
+                            shutil.copytree(source_path, dest_path)
+                        else:
+                            new_filename = f"{original_folder_basename}_{item}"
+                            dest_path = os.path.join(output, new_filename)
+                            shutil.copy2(source_path, dest_path)
+
+
                 #     dest_path = os.path.join(output, item)
 
                 #     if os.path.isdir(source_path):

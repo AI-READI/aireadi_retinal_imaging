@@ -95,12 +95,12 @@ def main():
     """
     # Example paths - replace with your actual paths or use command-line arguments
     home_folder = os.path.expanduser("~")
+    download_data_folder = os.path.join(home_folder, "Downloads")
+    output_data_folder = os.path.join(home_folder, "Downloads")
     download_data_folder = os.path.join(home_folder, "Downloads", "year3+pre")
     output_data_folder = os.path.join(home_folder, "Downloads", "year3+processed")
     input_triton_folder = os.path.join(download_data_folder, "triton")
     output_triton_folder = os.path.join(output_data_folder, "triton")
-    input_maestro2_folder = os.path.join(download_data_folder, "maestro2")
-    output_maestro2_folder = os.path.join(output_data_folder, "maestro2")
 
     # drive_folder = "G:\\"
     # input_triton_folder = os.path.join(drive_folder, "year3+raw", "triton")
@@ -232,6 +232,7 @@ def main():
         "maestro2_3d_wide_oct",
         "maestro2_mac_6x6_octa",
         "triton_3d_radial_oct",
+        "triton_3d_wide_oct",
         "triton_macula_6x6_octa",
         "triton_macula_12x12_octa",
     ]

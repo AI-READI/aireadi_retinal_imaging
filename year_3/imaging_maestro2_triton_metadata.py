@@ -14,6 +14,7 @@ oct_mapping = {
     "maestro2_macula_6x6_oct": ["Topcon", "Maestro2", "Macula, 6 x 6", "OCT"],
     "maestro2_3d_macula_oct": ["Topcon", "Maestro2", "Macula", "OCT"],
     "triton_3d_radial_oct": ["Topcon", "Triton", "Optic Disc", "OCT"],
+    "triton_3d_wide_oct": ["Topcon", "Triton", "Wide Field", "OCT"],
     "triton_macula_6x6_oct": ["Topcon", "Triton", "Macula, 6 x 6", "OCT"],
     "triton_macula_12x12_oct": ["Topcon", "Triton", "Macula, 12 x 12", "OCT"],
     "spectralis_onh_rc_hr_oct": ["Heidelberg", "Spectralis", "Optic Disc", "OCT"],
@@ -50,6 +51,7 @@ retinal_photography_mapping = {
     ],
     "maestro2_3d_macula": ["Topcon", "Maestro2", "Macula", "Color Photography", "3"],
     "triton_3d_radial": ["Topcon", "Triton", "Optic Disc", "Color Photography", "3"],
+    "triton_3d_wide": ["Topcon", "Triton", "Wide Field", "Color Photography", "3"],
     "triton_macula_6x6": [
         "Topcon",
         "Triton",
