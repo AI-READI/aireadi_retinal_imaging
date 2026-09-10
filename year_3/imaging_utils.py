@@ -185,6 +185,7 @@ oct_mapping = {
     "maestro2_macula_6x6_oct": ["Topcon", "Maestro2", "Macula, 6 x 6", "OCT"],
     "maestro2_3d_macula_oct": ["Topcon", "Maestro2", "Macula", "OCT"],
     "triton_3d_radial_oct": ["Topcon", "Triton", "Optic Disc", "OCT"],
+    "triton_3d_wide_oct": ["Topcon", "Triton", "Wide Field", "OCT"],
     "triton_macula_6x6_oct": ["Topcon", "Triton", "Macula, 6 x 6", "OCT"],
     "triton_macula_12x12_oct": ["Topcon", "Triton", "Macula, 12 x 12", "OCT"],
     "spectralis_onh_rc_hr_oct": ["Heidelberg", "Spectralis", "Optic Disc", "OCT"],
@@ -221,6 +222,7 @@ retinal_photography_mapping = {
     ],
     "maestro2_3d_macula": ["Topcon", "Maestro2", "Macula", "Color Photography", "3"],
     "triton_3d_radial": ["Topcon", "Triton", "Optic Disc", "Color Photography", "3"],
+    "triton_3d_wide": ["Topcon", "Triton", "Wide Field", "Color Photography", "3"],
     "triton_macula_6x6": [
         "Topcon",
         "Triton",
@@ -547,10 +549,10 @@ def topcon_check_files_expected(folder_path):
         for file in files:
             if file.endswith(
                 (
-                    "1.1.dcm",
-                    "2.1.dcm",
-                    "3.1.dcm",
-                    "7.3.dcm",
+                    ".1.1.dcm",
+                    ".2.1.dcm",
+                    ".3.1.dcm",
+                    ".7.3.dcm",
                     "6.3.dcm",
                     "6.4.dcm",
                     "6.5.dcm",
@@ -637,7 +639,14 @@ def topcon_process_folder(folder_path, outputpath, rule):
                     f for f in all_items if os.path.isfile(os.path.join(folder, f))
                 ]
 
-                if len(all_files) == 3:
+                has_flow = any(
+                    f.endswith((".3.1.dcm", "6.3.dcm", "6.4.dcm", "6.5.dcm", "6.80.dcm"))
+                    for f in all_files
+                )
+
+                if not has_flow:
+                    this_protocol = str(info.protocolname).strip().lower()
+
                     for item in all_items:
                         source_path = os.path.join(folder, item)
                         if os.path.isdir(source_path):
@@ -646,9 +655,20 @@ def topcon_process_folder(folder_path, outputpath, rule):
                                 shutil.rmtree(dest_path)
                             shutil.copytree(source_path, dest_path)
                         elif item.endswith(("1.1.dcm", "2.1.dcm")):
-                            new_filename = f"{original_folder_basename}_{item}"
-                            dest_path = os.path.join(output, new_filename)
-                            shutil.copy2(source_path, dest_path)
+                            item_ds = pydicom.dcmread(source_path)
+                            item_protocol = str(item_ds.get("ProtocolName", "")).strip().lower()
+
+                            if rule.startswith("triton_3d_radial"):
+                                keep = item_protocol.startswith("radial")
+                            elif rule.startswith("triton_3d_wide"):
+                                keep = item_protocol.startswith("3d")
+                            else:
+                                keep = item_protocol == this_protocol
+
+                            if keep:
+                                new_filename = f"{original_folder_basename}_{item}"
+                                dest_path = os.path.join(output, new_filename)
+                                shutil.copy2(source_path, dest_path)
                 else:
                     for item in all_items:
                         source_path = os.path.join(folder, item)
@@ -662,8 +682,7 @@ def topcon_process_folder(folder_path, outputpath, rule):
                             dest_path = os.path.join(output, new_filename)
                             shutil.copy2(source_path, dest_path)
 
-                # for item in os.listdir(os.path.dirname(file_path)):
-                #     source_path = os.path.join(os.path.dirname(file_path), item)
+
                 #     dest_path = os.path.join(output, item)
 
                 #     if os.path.isdir(source_path):
@@ -767,6 +786,7 @@ protocol_mapping = {
     "maestro2_mac_6x6_octa": "maestro2 macula 6x6 octa",
     "maestro2_3d_macula_oct": "maestro2 3d macula oct",
     "triton_3d_radial_oct": "triton 3d radial oct",
+    "triton_3d_wide_oct": "triton 3d wide oct",
     "triton_macula_6x6_octa": "triton macula 6x6 octa",
     "triton_macula_12x12_octa": "triton macula 12x12 octa",
     "spectralis_onh_rc_hr_oct": "spectralis onh rc hr oct",
@@ -787,11 +807,11 @@ name_mapping = {
     "eidon_uwf_nasal_cfp": "eidon_uwf_nasal_cfp",
     "eidon_uwf_temporal_cfp": "eidon_uwf_temporal_cfp",
     "eidon_uwf_central_cfp": "eidon_uwf_central_cfp",
-    # 6
     "maestro2_3d_wide_oct": "maestro2_3d_wide_oct",
     "maestro2_mac_6x6_octa": "maestro2_macula_6x6_octa",
     "maestro2_3d_macula_oct": "maestro2_3d_macula_oct",
     "triton_3d_radial_oct": "triton_3d_radial_oct",
+    "triton_3d_wide_oct": "triton_3d_wide_oct",
     "triton_macula_6x6_octa": "triton_macula_6x6_octa",
     "triton_macula_12x12_octa": "triton_macula_12x12_octa",
     "spectralis_onh_rc_hr_oct": "spectralis_onh_rc_hr_oct_oct",
@@ -870,7 +890,7 @@ def topcon_submodality(file):
     #     submodality = "flow_cube"
 
     elif a.SOPClassUID == "1.2.840.10008.5.1.4.1.1.77.1.5.8" and file.endswith(
-        "3.1.dcm"
+        ".3.1.dcm"
     ):
         submodality = "flow_cube"
 
@@ -1521,6 +1541,13 @@ def get_protocol_updated(i):
 
     make_unknown = False
 
+    # whether if  the file stored with a lossless transfer syntax
+    try:
+        _ts_name = ds.file_meta.TransferSyntaxUID.name
+        is_lossless = "lossless" in _ts_name.lower()
+    except Exception:
+        is_lossless = False
+
     # --- Check 1
     if (
         "maestro2_3d_wide_oct" in protocol
@@ -1543,24 +1570,23 @@ def get_protocol_updated(i):
         make_unknown = True
 
     # --- Check 4
-    if (
-        "triton_3d_radial_oct" in protocol
+    if ("triton_3d_radial_oct" in protocol
         and ds.get("LossyImageCompressionRatio") is None
-    ):
+        and not is_lossless):
         make_unknown = True
 
     # --- Check 5
     if (
         "triton_macula_12x12_octa" in protocol
         and ds.get("LossyImageCompressionRatio") is None
-    ):
+        and not is_lossless):
         make_unknown = True
 
     # --- Check 6
     if (
         "triton_macula_6x6_octa" in protocol
         and ds.get("LossyImageCompressionRatio") is None
-    ):
+        and not is_lossless):
         make_unknown = True
 
     # --- Check 7 (segmentation file 7.3.dcm)

@@ -94,13 +94,14 @@ def main():
     Main function to parse command-line arguments and run the Topcon processing pipeline.
     """
     # Example paths - replace with your actual paths or use command-line arguments
-    home_folder = os.path.expanduser("~")
-    download_data_folder = os.path.join(home_folder, "Downloads")
-    output_data_folder = os.path.join(home_folder, "Downloads")
-    download_data_folder = os.path.join(home_folder, "Downloads", "year3+pre")
-    output_data_folder = os.path.join(home_folder, "Downloads", "year3+processed")
-    input_triton_folder = os.path.join(download_data_folder, "triton")
-    output_triton_folder = os.path.join(output_data_folder, "triton")
+    # home_folder = os.path.expanduser("~")
+    drive_folder = "E:\\"
+    # download_data_folder = os.path.join(drive_folder, "triton")
+    output_data_folder = os.path.join(drive_folder, "maestro2")
+    input_triton_folder = os.path.join(drive_folder, "triton")
+    output_triton_folder = os.path.join(output_data_folder)
+    input_maestro2_folder = os.path.join(drive_folder, "maestro2")
+    output_maestro2_folder = os.path.join(output_data_folder, "triton")
 
     # drive_folder = "G:\\"
     # input_triton_folder = os.path.join(drive_folder, "year3+raw", "triton")
@@ -170,45 +171,53 @@ def main():
     # Initialize your custom class
     maestro2_triton_instance = Maestro2_Triton()
 
-    # Define paths for each step within the main output folder
-    step2_folder = os.path.join(output_folder, "step2_organized")
-    step3_folder = os.path.join(output_folder, "step3_converted_dicom")
-    step4_folder = os.path.join(output_folder, "step4_final_structure")
-    metadata_folder = os.path.join(output_folder, "metadata")
-    logs_folder = os.path.join(output_folder, "logs")
-
-    # Create the main output folder structure
-    folders_to_recreate = [
-        step2_folder,
-        step3_folder,
-        step4_folder,
-        metadata_folder,
-        logs_folder,
-    ]
-
-    print("Resetting output directories...")
-    for folder in folders_to_recreate:
-        # If the folder exists, delete it and all its contents
-        if os.path.exists(folder):
-            shutil.rmtree(folder)
-        # Create the folder fresh
-        os.makedirs(folder)
-
-    print("Directory structure is ready.")
-
-    # 3. --- Processing Pipeline ---
-
-    # Step 1: Organize
-    print("\nStep: Organizing files...")
-    step2_log_path = os.path.join(logs_folder, "step2_organized_log.csv")
+    # process each batch (input subfolder) into its own output folder
     batch_folders = imaging_utils.list_subfolders(input_folder)
 
     print(batch_folders)
 
-    for batch_folder in tqdm(batch_folders, desc="Organizing Batch Folders"):
+    for batch_folder in tqdm(batch_folders, desc="Processing Batch Folders"):
+        batch_name = os.path.basename(os.path.normpath(batch_folder))
+        if batch_name.endswith("_output"):
+            batch_name = batch_name[: -len("_output")]
+        batch_name = batch_name.replace("Maestro2", "M2")
+        batch_output = os.path.join(output_folder, batch_name)
 
-        subfolders = imaging_utils.list_subfolders(batch_folder)
+        # Define paths for each step within the main output folder
+        step2_folder = os.path.join(batch_output, "step2_organized")  # batch_output instead of output_folder
+        step3_folder = os.path.join(batch_output, "step3_converted_dicom")
+        step4_folder = os.path.join(batch_output, "step4_final_structure")
+        metadata_folder = os.path.join(batch_output, "metadata")
+        logs_folder = os.path.join(batch_output, "logs")
 
+        # Create the main output folder structure
+        folders_to_recreate = [
+            step2_folder,
+            step3_folder,
+            step4_folder,
+            metadata_folder,
+            logs_folder,
+        ]
+
+        print("Resetting output directories...")
+        for folder in folders_to_recreate:
+            # If the folder exists, delete it and all its contents
+            if os.path.exists(folder):
+                shutil.rmtree(folder)
+            # Create the folder fresh
+            os.makedirs(folder)
+
+        print("Directory structure is ready.")
+
+        # 3. --- Processing Pipeline ---
+
+        # Step 1: Organize
+        print("\nStep: Organizing files...")
+        step2_log_path = os.path.join(logs_folder, "step2_organized_log.csv")
+
+        subfolders = imaging_utils.list_subfolders(
+            batch_folder)  # only this batch's subfolders (outer batch loop removed)
+        print("BATCH:", batch_folder, "-> found folder count:", len(subfolders))
         for folder in tqdm(subfolders, desc="Organizing Folders"):
 
             try:
@@ -222,66 +231,66 @@ def main():
                 print(f"\nERROR organizing {folder}: {e}")
                 write_log(step2_log_path, folder, "FAILURE", str(e))
 
-    # Step 2: Convert to DICOM
-    print("\nStep: Converting to DICOM format...")
-    step3_log_path = os.path.join(logs_folder, "step3_convert_log.csv")
-    folders = imaging_utils.list_subfolders(step2_folder)
+        # Step 2: Convert to DICOM
+        print("\nStep: Converting to DICOM format...")
+        step3_log_path = os.path.join(logs_folder, "step3_convert_log.csv")
+        folders = imaging_utils.list_subfolders(step2_folder)
 
-    protocols = [
-        "maestro2_3d_macula_oct",
-        "maestro2_3d_wide_oct",
-        "maestro2_mac_6x6_octa",
-        "triton_3d_radial_oct",
-        "triton_3d_wide_oct",
-        "triton_macula_6x6_octa",
-        "triton_macula_12x12_octa",
-    ]
+        protocols = [
+            "maestro2_3d_macula_oct",
+            "maestro2_3d_wide_oct",
+            "maestro2_mac_6x6_octa",
+            "triton_3d_radial_oct",
+            "triton_macula_6x6_octa",
+            "triton_macula_12x12_octa",
+        ]
 
-    for protocol in protocols:
-        output = os.path.join(step3_folder, protocol)
-        if not os.path.exists(output):
-            os.makedirs(output)
+        for protocol in protocols:
+            output = os.path.join(step3_folder, protocol)
+            if not os.path.exists(output):
+                os.makedirs(output)
 
-        folders = imaging_utils.list_subfolders(os.path.join(step2_folder, protocol))
+            folders = imaging_utils.list_subfolders(os.path.join(step2_folder, protocol))
 
-        if len(folders) == 0:
-            continue
+            if len(folders) == 0:
+                continue
 
-        for folder in tqdm(folders, desc="Converting"):
+            for folder in tqdm(folders, desc="Converting"):
+                print("CONVERTING:", folder)
 
-            try:
-                convert_result = maestro2_triton_instance.convert(folder, output)
-                # write_log(step3_log_path, folder, "SUCCESS")
-            except Exception as e:
-                # If an error occurs, log it and continue to the next folder
-                print(f"\nERROR converting {folder}: {e}")
-                write_log(step3_log_path, folder, "FAILURE", str(e))
-                print(e)
+                try:
+                    convert_result = maestro2_triton_instance.convert(folder, output)
+                    # write_log(step3_log_path, folder, "SUCCESS")
+                except Exception as e:
+                    # If an error occurs, log it and continue to the next folder
+                    print(f"\nERROR converting {folder}: {e}")
+                    write_log(step3_log_path, folder, "FAILURE", str(e))
+                    print(e)
 
-    # Step 3: Final Structure and Metadata Extraction
-    print("\nStep: Arranging final structure and extracting metadata...")
-    step4_log_path = os.path.join(logs_folder, "step4_final_log.csv")
-    folders = imaging_utils.list_subfolders(step3_folder)
+        # Step 3: Final Structure and Metadata Extraction
+        print("\nStep: Arranging final structure and extracting metadata...")
+        step4_log_path = os.path.join(logs_folder, "step4_final_log.csv")
+        folders = imaging_utils.list_subfolders(step3_folder)
 
-    for folder in folders:
-        filelist = imaging_utils.get_filtered_file_names(folder)
+        for folder in folders:
+            filelist = imaging_utils.get_filtered_file_names(folder)
 
-        if len(filelist) == 0:
-            continue
+            if len(filelist) == 0:
+                continue
 
-        for file in tqdm(filelist):
-            try:
-                full_file_path = imaging_utils.format_file(file, step4_folder)
-                if full_file_path:
-                    metadata_result = maestro2_triton_instance.metadata(
-                        full_file_path, metadata_folder
-                    )
-                    # write_log(step4_log_path, file, "SUCCESS")
+            for file in tqdm(filelist):
+                try:
+                    full_file_path = imaging_utils.format_file(file, step4_folder)
+                    if full_file_path:
+                        metadata_result = maestro2_triton_instance.metadata(
+                            full_file_path, metadata_folder
+                        )
+                        # write_log(step4_log_path, file, "SUCCESS")
 
-            except Exception as e:
-                # If an error occurs, log it and continue to the next folder
-                print(f"\nERROR finalizing {file}: {e}")
-                write_log(step4_log_path, file, "FAILURE", str(e))
+                except Exception as e:
+                    # If an error occurs, log it and continue to the next folder
+                    print(f"\nERROR finalizing {file}: {e}")
+                    write_log(step4_log_path, file, "FAILURE", str(e))
 
 
 if __name__ == "__main__":
