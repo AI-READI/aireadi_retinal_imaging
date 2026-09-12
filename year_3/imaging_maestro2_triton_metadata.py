@@ -233,6 +233,10 @@ def meta_data_save(filename, output_folder):
             pixel_spacing = "Varies by frame"
             slice_thickness = "Not reported"
 
+        elif "triton_3d_radial_oct" in filename:
+            pixel_spacing = str(dataset[0x52009229][0][0x00289110][0][0x00280030].value)
+            slice_thickness = "Not reported"
+
         else:
             pixel_spacing = str(dataset[0x52009229][0][0x00289110][0][0x00280030].value)
             slice_thickness = str(
