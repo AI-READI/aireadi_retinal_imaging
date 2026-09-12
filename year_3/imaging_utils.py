@@ -551,6 +551,7 @@ def topcon_check_files_expected(folder_path):
                 (
                     ".1.1.dcm",
                     ".2.1.dcm",
+                    ".2.2.dcm",
                     ".3.1.dcm",
                     ".7.3.dcm",
                     "6.3.dcm",
@@ -563,7 +564,7 @@ def topcon_check_files_expected(folder_path):
 
     # Check if files match expected patterns
 
-    if (files_count_9 == 3) or (files_count_9 == 8) or (files_count_9 == 7):
+    if files_count_9 in (3, 4, 7, 8, 9):
         return "Expected"
     else:
         return "Unknown"
@@ -654,7 +655,7 @@ def topcon_process_folder(folder_path, outputpath, rule):
                             if os.path.exists(dest_path):
                                 shutil.rmtree(dest_path)
                             shutil.copytree(source_path, dest_path)
-                        elif item.endswith(("1.1.dcm", "2.1.dcm")):
+                        elif item.endswith(("1.1.dcm", "2.1.dcm", "2.2.dcm")):
                             item_ds = pydicom.dcmread(source_path)
                             item_protocol = str(item_ds.get("ProtocolName", "")).strip().lower()
 

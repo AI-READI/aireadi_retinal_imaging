@@ -30,6 +30,10 @@ def convert_dicom(folder, output):
         os.makedirs(output)
 
     x = imaging_utils.get_filtered_file_names(folder)
+
+    files_22 = [f for f in x if f.endswith("2.2.dcm")]
+    x = [f for f in x if not f.endswith("2.2.dcm")]
+
     uids_sorted = sorted(x, key=imaging_utils.extract_numeric_part)
 
     conversion_num = 0
@@ -69,6 +73,11 @@ def convert_dicom(folder, output):
             conversion_num += 1
 
     file_num = len(imaging_utils.get_filtered_file_names(folder))
+
+    for f22 in files_22:
+        maestro2_triton_retinal_photography_converter.convert_dicom(f22, output)
+        conversion_num += 1
+
     boolean = file_num == conversion_num
 
     dic = {
