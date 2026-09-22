@@ -361,8 +361,17 @@ def process_topcon_file(seg, imaging_folder, metadata_folder):
                 op_uid, "filepath"
             ]
         except KeyError:
-            op_filepath = "Not Provided"
-            print(f"{op_uid} unavailable")
+            try:
+                op_uid_alt = ".".join(seg_uid.split(".")[:-2] + ["2", "2"])
+
+                op_filepath = input_op_df.set_index("sop_instance_uid").loc[
+                    op_uid_alt, "filepath"
+                ]
+                op_uid = op_uid_alt
+                df.loc[:, "associated_retinal_photography_sop_instance_uid"] = op_uid
+            except KeyError:
+                op_filepath = "Not Provided"
+                print(f"{op_uid} unavailable")
 
         opt_filepath = input_opt_df.set_index("sop_instance_uid").loc[
             opt_uid, "filepath"
