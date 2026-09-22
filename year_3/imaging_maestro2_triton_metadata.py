@@ -132,7 +132,8 @@ def meta_data_save(filename, output_folder):
         dict: A dictionary containing the extracted metadata.
     """
 
-    dataset = pydicom.dcmread(filename)
+    # dataset = pydicom.dcmread(filename)
+    dataset = pydicom.dcmread(filename, stop_before_pixels=True)
 
     if dataset.SOPClassUID == "1.2.840.10008.5.1.4.1.1.77.1.5.1":
 
