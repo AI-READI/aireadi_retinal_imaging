@@ -857,9 +857,19 @@ def make_retinal_oct_manifest(op, imaging_folder):
                 ]
             ].copy()
 
-            df_filtered.loc[:, "reference_filepath"] = df_filtered[
-                "reference_retinal_photography_image_instance_uid"
-            ].map(input_df.set_index("sop_instance_uid")["filepath"])
+            uid_to_filepath = input_df.set_index("sop_instance_uid")["filepath"]
+            ref_uids = df_filtered["reference_retinal_photography_image_instance_uid"]
+
+            # Some series number the referenced photography .2.2 instead of .2.1,
+            # so fall back to that suffix where the first lookup found nothing.
+            df_filtered.loc[:, "reference_filepath"] = ref_uids.map(uid_to_filepath).fillna(
+                (ref_uids.str[:-1] + "2").map(uid_to_filepath)
+            )
+
+            # Keep the recorded UID in sync with the file that was actually found.
+            df_filtered.loc[:, "reference_retinal_photography_image_instance_uid"] = ref_uids.where(
+                ref_uids.isin(uid_to_filepath.index), ref_uids.str[:-1] + "2"
+            )
 
             df_filtered.rename(
                 columns={
