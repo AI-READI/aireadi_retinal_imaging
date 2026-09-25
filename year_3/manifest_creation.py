@@ -40,14 +40,13 @@ def find_matching_json_files(sop_instance_uid, imaging_type, files_list):
         fl = f.lower()
         i = fl.find(imaging_type)
         if (
-            i != -1
-            and fl.find(modified_uid, i + len(imaging_type)) != -1
-            and fl.endswith(".json")
+                i != -1
+                and fl.find(modified_uid, i + len(imaging_type)) != -1
+                and fl.endswith(".json")
         ):
             matching_files.append(f)
 
     return matching_files
-
 
 
 def get_json_filenames(folder_path):
@@ -106,7 +105,6 @@ def process_enface(file):
 
 
 def process_cirrus_file(file, imaging_folder, metadata_folder):
-
     files = get_json_filenames(os.path.join(metadata_folder, "retinal_octa"))
     op = os.path.join(imaging_folder, "retinal_photography", "manifest.tsv")
     opt = os.path.join(imaging_folder, "retinal_oct", "manifest.tsv")
@@ -633,7 +631,7 @@ from tqdm import tqdm
 # Split a list into 'n' equal parts
 def split_list(lst, n):
     k, m = divmod(len(lst), n)
-    return [lst[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)] for i in range(n)]
+    return [lst[i * k + min(i, m): (i + 1) * k + min(i + 1, m)] for i in range(n)]
 
 
 def process_sublist(sublist, sublist_index, imaging_folder, input_op_df, input_opt_df, files):
@@ -814,14 +812,25 @@ def make_retinal_photography_manifest(imaging_folder):
 
 
 def make_retinal_oct_manifest(op, imaging_folder):
-
     metadata_folder = f"{imaging_folder}_metadata"  # This is a suffix, not a path join
 
     retinal_oct = "retinal_oct"
     input_op = op
 
     # Load the input_op TSV file
-    input_df = pd.read_csv(input_op, sep="\t")
+    # input_df = pd.read_csv(input_op, sep="\t")
+
+    input_df = pd.read_csv(input_op, sep="\t", dtype=str)
+
+    # Some Triton scans exist twice with the same SOP Instance UID (old radial label + new wide label).
+    # Build the lookup from one row per UID, preferring the wide file. Manifest rows are not changed.
+    is_wide = input_df["filepath"].str.contains("triton_3d_wide", case=False, na=False)
+    uid_to_filepath = (
+        input_df.assign(_is_wide=is_wide)
+        .sort_values("_is_wide", ascending=False)
+        .drop_duplicates("sop_instance_uid")
+        .set_index("sop_instance_uid")["filepath"]
+    )
 
     files = get_json_filenames(os.path.join(metadata_folder, retinal_oct))
 
@@ -857,7 +866,7 @@ def make_retinal_oct_manifest(op, imaging_folder):
                 ]
             ].copy()
 
-            uid_to_filepath = input_df.set_index("sop_instance_uid")["filepath"]
+            # uid_to_filepath = input_df.set_index("sop_instance_uid")["filepath"]
             ref_uids = df_filtered["reference_retinal_photography_image_instance_uid"]
 
             # Some series number the referenced photography .2.2 instead of .2.1,
