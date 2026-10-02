@@ -1,5 +1,5 @@
 import os
-
+import re
 import pydicom
 
 
@@ -159,10 +159,21 @@ rules = [
         ],
     ),
     ClassifyingRule(
+        "triton_3d_wide_oct_oct",
+        conditions=[
+            lambda entry: entry.device == "Triton plus"
+            and str(entry.protocolname).strip().lower().startswith("3d")
+            and "wide" in str(entry.protocolname).lower()
+            and re.findall(r"\d+", str(entry.protocolname))[-2:] == ["12", "9"]
+        ],
+    ),
+    ClassifyingRule(
         "triton_3d_radial_oct_oct",
         conditions=[
             lambda entry: entry.device == "Triton plus"
-            and str(entry.slicethickness).startswith("0.03")
+            and str(entry.protocolname).strip().lower().startswith("radial")
+            and re.findall(r"\d+", str(entry.protocolname))[-2:] == ["12", "6"]
+            and (entry.framenumber == "N/A" or entry.framenumber == 12)
         ],
     ),
     ClassifyingRule(
@@ -394,6 +405,7 @@ class DicomEntry:
         acquisitiondatetime,
         performedprotocol,
         seriesdescription,
+        protocolname,
         studyid,
         gaze,
         seriesuid,
@@ -416,6 +428,7 @@ class DicomEntry:
         self.acquisitiondatetime = acquisitiondatetime
         self.performedprotocol = performedprotocol
         self.seriesdescription = seriesdescription
+        self.protocolname = protocolname
         self.studyid = studyid
         self.gaze = gaze
         self.seriesuid = seriesuid
@@ -515,6 +528,8 @@ def extract_dicom_entry(file):
 
     performedprotocol = "N/A"
     studyid = "N/A"
+    protocolname = "N/A"
+
     slicethickness = 0
     rows = device = columns = framenumber = acquisitiondatetime = seriesdescription = (
         referencedsopinstance
@@ -547,6 +562,9 @@ def extract_dicom_entry(file):
         else:
             privatetag = "N/A"
 
+        if "00181030" in dicom and "Value" in dicom["00181030"]:
+            protocolname = dicom["00181030"]["Value"][0]
+
         if "00220006" in dicom:
             try:
                 gaze = dicom["00220006"]["Value"][0]["00080104"]["Value"][0]
@@ -570,6 +588,9 @@ def extract_dicom_entry(file):
         acquisitiondatetime = dicom["0008002A"]["Value"][0]
         device = dicom["00081090"]["Value"][0]
         privatetag = "N/A"
+
+        if "00181030" in dicom and "Value" in dicom["00181030"]:
+            protocolname = dicom["00181030"]["Value"][0]
 
         if "52009229" in dicom:
             referencedsopinstance = dicom["52009229"]["Value"][0]["00081140"]["Value"][
@@ -635,6 +656,7 @@ def extract_dicom_entry(file):
         acquisitiondatetime,
         performedprotocol,
         seriesdescription,
+        protocolname,
         studyid,
         gaze,
         seriesuid,

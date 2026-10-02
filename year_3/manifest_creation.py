@@ -28,13 +28,23 @@ def replace_dots_with_underscores(sop_instance_uid):
 
 def find_matching_json_files(sop_instance_uid, imaging_type, files_list):
     """
-    Find JSON files in the list that contain the modified SOP instance UID
-    and include both 'segmentation' and 'cirrus' in their file name.
+    Find JSON files whose path contains imaging_type, followed later by the
+    modified SOP instance UID, and ends with .json (case-insensitive).
+    Plain string search: same result as the old regex, much faster.
     """
-    modified_uid = replace_dots_with_underscores(sop_instance_uid)
-    pattern = rf".*{imaging_type}.*{modified_uid}.*\.json$"
+    modified_uid = replace_dots_with_underscores(sop_instance_uid).lower()
+    imaging_type = imaging_type.lower()
 
-    matching_files = [f for f in files_list if re.search(pattern, f, re.IGNORECASE)]
+    matching_files = []
+    for f in files_list:
+        fl = f.lower()
+        i = fl.find(imaging_type)
+        if (
+                i != -1
+                and fl.find(modified_uid, i + len(imaging_type)) != -1
+                and fl.endswith(".json")
+        ):
+            matching_files.append(f)
 
     return matching_files
 
@@ -95,7 +105,6 @@ def process_enface(file):
 
 
 def process_cirrus_file(file, imaging_folder, metadata_folder):
-
     files = get_json_filenames(os.path.join(metadata_folder, "retinal_octa"))
     op = os.path.join(imaging_folder, "retinal_photography", "manifest.tsv")
     opt = os.path.join(imaging_folder, "retinal_oct", "manifest.tsv")
@@ -332,13 +341,10 @@ def process_cirrus_file(file, imaging_folder, metadata_folder):
         return df_filtered
 
 
-def process_topcon_file(seg, imaging_folder, metadata_folder):
-
-    files = get_json_filenames(os.path.join(metadata_folder, "retinal_octa"))
-    op = os.path.join(imaging_folder, "retinal_photography", "manifest.tsv")
-    opt = os.path.join(imaging_folder, "retinal_oct", "manifest.tsv")
-    input_op_df = pd.read_csv(op, sep="\t")
-    input_opt_df = pd.read_csv(opt, sep="\t")
+def process_topcon_file(seg, imaging_folder, metadata_folder, input_op_df, input_opt_df, files):
+    # files, input_op_df and input_opt_df now come from octa_manifest, built once and
+    # reused, instead of being rebuilt from disk on every call.
+    # files = get_json_filenames(os.path.join(metadata_folder, "retinal_octa"))
 
     with open(seg, "r") as dic:
         json_data = json.load(dic)
@@ -361,8 +367,17 @@ def process_topcon_file(seg, imaging_folder, metadata_folder):
                 op_uid, "filepath"
             ]
         except KeyError:
-            op_filepath = "Not Provided"
-            print(f"{op_uid} unavailable")
+            try:
+                op_uid_alt = ".".join(seg_uid.split(".")[:-2] + ["2", "2"])
+
+                op_filepath = input_op_df.set_index("sop_instance_uid").loc[
+                    op_uid_alt, "filepath"
+                ]
+                op_uid = op_uid_alt
+                df.loc[:, "associated_retinal_photography_sop_instance_uid"] = op_uid
+            except KeyError:
+                op_filepath = "Not Provided"
+                print(f"{op_uid} unavailable")
 
         opt_filepath = input_opt_df.set_index("sop_instance_uid").loc[
             opt_uid, "filepath"
@@ -616,17 +631,17 @@ from tqdm import tqdm
 # Split a list into 'n' equal parts
 def split_list(lst, n):
     k, m = divmod(len(lst), n)
-    return [lst[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)] for i in range(n)]
+    return [lst[i * k + min(i, m): (i + 1) * k + min(i + 1, m)] for i in range(n)]
 
 
-def process_sublist(sublist, sublist_index, imaging_folder):
+def process_sublist(sublist, sublist_index, imaging_folder, input_op_df, input_opt_df, files):
     metadata_folder = f"{imaging_folder}_metadata"  # This is a suffix, not a path join
     df_combined = pd.DataFrame()
 
     # Process each file in the sublist
     for file in tqdm(sublist, desc=f"Processing sublist {sublist_index}"):
         if "maestro2" in file or "triton" in file:
-            df = process_topcon_file(file, imaging_folder, metadata_folder)
+            df = process_topcon_file(file, imaging_folder, metadata_folder, input_op_df, input_opt_df, files)
         elif "cirrus" in file:
             df = process_cirrus_file(file, imaging_folder, metadata_folder)
         else:
@@ -672,7 +687,7 @@ def octa_manifest(imaging_folder):
     merged_files = cirrus_filtered_files + topcon_filtered_files
 
     # Define number of sublists
-    num_sublists = 5
+    num_sublists = 14
 
     merged_split_lists = split_list(merged_files, num_sublists)
 
@@ -680,8 +695,11 @@ def octa_manifest(imaging_folder):
     for i in range(num_sublists):
         print(f"Sublist {i + 1}: {len(merged_split_lists[i])} files")
 
-    Parallel(n_jobs=-1)(
-        delayed(process_sublist)(sublist, sublist_index, imaging_folder)
+    input_op_df = pd.read_csv(os.path.join(imaging_folder, "retinal_photography", "manifest.tsv"), sep="\t")
+    input_opt_df = pd.read_csv(os.path.join(imaging_folder, "retinal_oct", "manifest.tsv"), sep="\t")
+
+    Parallel(n_jobs=14)(
+        delayed(process_sublist)(sublist, sublist_index, imaging_folder, input_op_df, input_opt_df, files)
         for sublist_index, sublist in enumerate(merged_split_lists)
     )
     all_files = glob.glob(
@@ -794,14 +812,25 @@ def make_retinal_photography_manifest(imaging_folder):
 
 
 def make_retinal_oct_manifest(op, imaging_folder):
-
     metadata_folder = f"{imaging_folder}_metadata"  # This is a suffix, not a path join
 
     retinal_oct = "retinal_oct"
     input_op = op
 
     # Load the input_op TSV file
-    input_df = pd.read_csv(input_op, sep="\t")
+    # input_df = pd.read_csv(input_op, sep="\t")
+
+    input_df = pd.read_csv(input_op, sep="\t", dtype=str)
+
+    # Some Triton scans exist twice with the same SOP Instance UID (old radial label + new wide label).
+    # Build the lookup from one row per UID, preferring the wide file. Manifest rows are not changed.
+    is_wide = input_df["filepath"].str.contains("triton_3d_wide", case=False, na=False)
+    uid_to_filepath = (
+        input_df.assign(_is_wide=is_wide)
+        .sort_values("_is_wide", ascending=False)
+        .drop_duplicates("sop_instance_uid")
+        .set_index("sop_instance_uid")["filepath"]
+    )
 
     files = get_json_filenames(os.path.join(metadata_folder, retinal_oct))
 
@@ -837,9 +866,19 @@ def make_retinal_oct_manifest(op, imaging_folder):
                 ]
             ].copy()
 
-            df_filtered.loc[:, "reference_filepath"] = df_filtered[
-                "reference_retinal_photography_image_instance_uid"
-            ].map(input_df.set_index("sop_instance_uid")["filepath"])
+            # uid_to_filepath = input_df.set_index("sop_instance_uid")["filepath"]
+            ref_uids = df_filtered["reference_retinal_photography_image_instance_uid"]
+
+            # Some series number the referenced photography .2.2 instead of .2.1,
+            # so fall back to that suffix where the first lookup found nothing.
+            df_filtered.loc[:, "reference_filepath"] = ref_uids.map(uid_to_filepath).fillna(
+                (ref_uids.str[:-1] + "2").map(uid_to_filepath)
+            )
+
+            # Keep the recorded UID in sync with the file that was actually found.
+            df_filtered.loc[:, "reference_retinal_photography_image_instance_uid"] = ref_uids.where(
+                ref_uids.isin(uid_to_filepath.index), ref_uids.str[:-1] + "2"
+            )
 
             df_filtered.rename(
                 columns={

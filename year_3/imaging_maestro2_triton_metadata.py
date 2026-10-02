@@ -14,6 +14,7 @@ oct_mapping = {
     "maestro2_macula_6x6_oct": ["Topcon", "Maestro2", "Macula, 6 x 6", "OCT"],
     "maestro2_3d_macula_oct": ["Topcon", "Maestro2", "Macula", "OCT"],
     "triton_3d_radial_oct": ["Topcon", "Triton", "Optic Disc", "OCT"],
+    "triton_3d_wide_oct": ["Topcon", "Triton", "Wide Field", "OCT"],
     "triton_macula_6x6_oct": ["Topcon", "Triton", "Macula, 6 x 6", "OCT"],
     "triton_macula_12x12_oct": ["Topcon", "Triton", "Macula, 12 x 12", "OCT"],
     "spectralis_onh_rc_hr_oct": ["Heidelberg", "Spectralis", "Optic Disc", "OCT"],
@@ -50,6 +51,7 @@ retinal_photography_mapping = {
     ],
     "maestro2_3d_macula": ["Topcon", "Maestro2", "Macula", "Color Photography", "3"],
     "triton_3d_radial": ["Topcon", "Triton", "Optic Disc", "Color Photography", "3"],
+    "triton_3d_wide": ["Topcon", "Triton", "Wide Field", "Color Photography", "3"],
     "triton_macula_6x6": [
         "Topcon",
         "Triton",
@@ -130,7 +132,8 @@ def meta_data_save(filename, output_folder):
         dict: A dictionary containing the extracted metadata.
     """
 
-    dataset = pydicom.dcmread(filename)
+    # dataset = pydicom.dcmread(filename)
+    dataset = pydicom.dcmread(filename, stop_before_pixels=True)
 
     if dataset.SOPClassUID == "1.2.840.10008.5.1.4.1.1.77.1.5.1":
 
@@ -229,6 +232,10 @@ def meta_data_save(filename, output_folder):
 
         if "spectralis_onh_rc_hr_oct" in filename:
             pixel_spacing = "Varies by frame"
+            slice_thickness = "Not reported"
+
+        elif "triton_3d_radial_oct" in filename:
+            pixel_spacing = str(dataset[0x52009229][0][0x00289110][0][0x00280030].value)
             slice_thickness = "Not reported"
 
         else:
